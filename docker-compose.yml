@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aurelis_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aurelis_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurelis_dev_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-aurelis_fleet}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aurelis_admin} -d ${POSTGRES_DB:-aurelis_fleet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurelis_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: aurelis_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aurelis_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aurelis_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=Aurelis Fleet Operations
+      - APP_ENV=development
+      - DEBUG=true
+      - DATABASE_URL=postgresql+asyncpg://aurelis_admin:aurelis_dev_secret@postgres:5432/aurelis_fleet
+      - DATABASE_SYNC_URL=postgresql://aurelis_admin:aurelis_dev_secret@postgres:5432/aurelis_fleet
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=aurelis_super_secret_dev_key_change_in_production_32char_minimum
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=15
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aurelis_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  aurelis_network:
+    driver: bridge
