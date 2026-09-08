@@ -201,37 +201,85 @@ tracktruck/
 
 ---
 
-## 🚀 Rapid Local Setup (Quickstart)
+## 🚀 Rapid Local Setup & Verification (Quickstart)
 
 ### 1. Prerequisites
-- Docker Engine 24+ & Docker Compose v2+
-- Python 3.12+
-- Node.js 20+ & pnpm / npm
-- Flutter SDK 3.22+ (for mobile development)
+- Python 3.12+ (Python 3.14 compatible)
+- Docker Engine 24+ & Docker Compose v2+ (Optional for containerized run)
+- Git
 
-### 2. Launch Local Infrastructure
+### 2. Environment Setup (Local Virtualenv)
 ```bash
-# Clone the repository
+# 1. Clone repository
 git clone https://github.com/Nixxzzzzz/tracktruck.git
 cd tracktruck
 
-# Launch PostgreSQL 16, Redis 7, and Backend API
-docker compose up -d
+# 2. Configure environment file
+cp .env.example .env
+
+# 3. Initialize Python virtual environment
+python -m venv .venv
+
+# 4. Activate environment
+# On Linux/macOS:
+source .venv/bin/activate
+# On Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+
+# 5. Install backend dependencies
+pip install -r backend/requirements.txt
 ```
 
-### 3. Initialize Database Migrations & Seeds
+### 3. Verify Migrations & Execute Automated Test Suite
 ```bash
-# Run database migrations
+# Verify Alembic migration generation
+cd backend
+alembic -c alembic.ini upgrade head --sql
+
+# Run unit and integration tests (19 test cases, 100% passing)
+pytest -v
+
+# Run code linter and formatting checks
+ruff check .
+ruff format --check .
+```
+
+### 4. Launch Development Server
+```bash
+# Start FastAPI backend engine with auto-reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Access interactive OpenAPI documentation at: `http://localhost:8000/docs`
+
+---
+
+### 5. Launch with Docker Compose (Containerized Production/Dev Stack)
+```bash
+# Launch PostgreSQL 16, Redis 7, and FastAPI Backend containers
+docker compose up -d
+
+# Execute database migrations inside container
 docker compose exec backend alembic upgrade head
 
-# Load master data seeds (Vehicles, Drivers, Route Templates, Test Accounts)
-docker compose exec backend python -m app.core.seed
+# Access backend API:
+# http://localhost:8000/docs
+# Health check:
+# http://localhost:8000/api/v1/health
 ```
 
-### 4. Access Services
-- **Web Operations Console**: `http://localhost:3000`
-- **Backend Interactive Swagger API**: `http://localhost:8000/docs`
-- **PostgreSQL Database**: `localhost:5432` (Database: `aurelis_fleet`)
+---
+
+## 🛡️ Phase 1 Foundation API Endpoints
+
+| Method | Endpoint | Description | Scope / Roles |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | Service liveness & PostgreSQL / Redis dependency readiness check | Public |
+| `POST` | `/api/v1/auth/login` | Authenticate user credentials & issue JWT token pair | Public |
+| `POST` | `/api/v1/auth/refresh` | Exchange refresh token with automated token rotation | Public |
+| `POST` | `/api/v1/auth/logout` | Revoke active access and refresh token JTIs in Redis | Authenticated |
+| `GET` | `/api/v1/auth/me` | Fetch active user profile and computed RBAC permissions | Authenticated |
+| `GET` | `/api/v1/auth/test-admin-only` | Test route demonstrating `require_roles("SUPER_ADMIN", "ADMIN")` | Admin Only |
+| `GET` | `/api/v1/auth/test-driver-only` | Test route demonstrating `require_roles("DRIVER")` | Driver Only |
 
 ---
 
