@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aurelis-fleet-backend"
+version = "0.1.0"
+description = "AURELIS FLEET — Luxury Fleet & Logistics Operations Management Backend Core"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13.1",
+    "asyncpg>=0.29.0",
+    "redis>=5.0.4",
+    "pyjwt>=2.8.0",
+    "argon2-cffi>=23.1.0",
+    "passlib[argon2]>=1.7.4",
+    "python-multipart>=0.0.9",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501", "UP007", "UP035", "UP046"]
